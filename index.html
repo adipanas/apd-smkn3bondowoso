@@ -1965,8 +1965,12 @@ textarea:disabled {
     /* ========================================================
        REST API ENGINE (Menggantikan google.script.run)
     ======================================================== */
+    /* ========================================================
+       REST API ENGINE (BEBAS CORS UNTUK GITHUB PAGES)
+    ======================================================== */
     async function requestApi(action, payload, method) {
       method = method || 'POST';
+      
       if (method === 'GET') {
         let url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
         if (payload && typeof payload === 'object') {
@@ -1976,11 +1980,20 @@ textarea:disabled {
             }
           });
         }
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow'
+        });
         return await res.json();
       } else {
+        // Menggunakan text/plain agar browser tidak memicu CORS Preflight (OPTIONS)
         const res = await fetch(SCRIPT_URL, {
           method: 'POST',
+          mode: 'cors',
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
           body: JSON.stringify({ action: action, payload: payload })
         });
         return await res.json();
