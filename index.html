@@ -1963,41 +1963,25 @@ textarea:disabled {
     }
 
     /* ========================================================
-       REST API ENGINE (Menggantikan google.script.run)
+       REST API ENGINE (UNIVERSAL GET/POST BEBAS CORS)
     ======================================================== */
-    /* ========================================================
-       REST API ENGINE (BEBAS CORS UNTUK GITHUB PAGES)
-    ======================================================== */
-    async function requestApi(action, payload, method) {
-      method = method || 'POST';
+    async function requestApi(action, payload) {
+      payload = payload || {};
       
-      if (method === 'GET') {
-        let url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
-        if (payload && typeof payload === 'object') {
-          Object.keys(payload).forEach(function(key) {
-            if (payload[key] !== null && payload[key] !== undefined) {
-              url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]);
-            }
-          });
-        }
-        const res = await fetch(url, {
-          method: 'GET',
-          redirect: 'follow'
-        });
-        return await res.json();
-      } else {
-        // Menggunakan text/plain agar browser tidak memicu CORS Preflight (OPTIONS)
-        const res = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          redirect: 'follow',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
-          body: JSON.stringify({ action: action, payload: payload })
-        });
-        return await res.json();
+      // Bungkus seluruh payload ke dalam parameter data terenkode URL
+      const dataParam = encodeURIComponent(JSON.stringify(payload));
+      const url = SCRIPT_URL + '?action=' + encodeURIComponent(action) + '&data=' + dataParam;
+
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+
+      if (!res.ok) {
+        throw new Error('Gagal menghubungi server Google (HTTP ' + res.status + ')');
       }
+
+      return await res.json();
     }
 
     /* ========================================================
@@ -2014,7 +1998,7 @@ textarea:disabled {
       updateOfflineBar();
     });
 
-    async function prosesSinkronisasiAntrean() {
+   async function prosesSinkronisasiAntrean() {
       const db = await bukaDB();
       const tx = db.transaction('antrean_absensi', 'readonly');
       const store = tx.objectStore('antrean_absensi');
@@ -2036,7 +2020,7 @@ textarea:disabled {
             console.warn('Gagal sync antrean:', item.id, e);
           }
         }
-        updateOfflineBar();
+        await updateOfflineBar();
         showToast('Sinkronisasi selesai. Seluruh data telah masuk server.', 'success');
       };
     }
