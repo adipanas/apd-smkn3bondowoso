@@ -1,1 +1,877 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Absensi Pembelajaran Digital (APD)</title>
 
+  <!-- PWA Settings -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#075bc9">
+  <link rel="apple-touch-icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgu4CQYNMcMdpEL4zfQp6eyCtTH5NqpnmXr2JOOI6QPi8ktsfylvEpeBK7FOlYSMGBq6hnZy75XvATm2VRmrVcXR0C39joe_v_GrAaosLdsrE6k1E5FjHY0ky-OdpIt3MnGhyphenhyphenJmRB7JAabdZdIu-b-fFGB26BP6Us39vtkJGnW2rlzEjTk0e-jgfTVGuoUY/s512/49cc3a15-ea1a-4b69-98d7-02fa415fb250%20(1).png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #075bc9;
+      --primary-dark: #0649a7;
+      --primary-soft: #eef6ff;
+      --background: #f3f6fa;
+      --surface: #ffffff;
+      --text: #172033;
+      --text-secondary: #4b5563;
+      --muted: #7b8797;
+      --border: #e0e7ef;
+      --border-strong: #d5dee9;
+      --radius-sm: 9px;
+      --radius-md: 12px;
+      --radius-lg: 15px;
+      --shadow-sm: 0 2px 8px rgba(15, 49, 92, 0.05);
+      --shadow-header: 0 4px 14px rgba(0, 63, 145, 0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { width: 100%; margin: 0; padding: 0; background: var(--background); scroll-behavior: smooth; }
+    body {
+      width: 100%; margin: 0; padding: 0 0 calc(36px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, #eef5fd 0, #f7f9fc 180px, var(--background) 100%);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+    }
+
+    button, select, input, textarea { font: inherit; }
+    button { touch-action: manipulation; }
+    .hidden { display: none !important; }
+
+    /* Header */
+    .app-header {
+      position: sticky; top: 0; z-index: 100; width: 100%;
+      padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+      background: linear-gradient(135deg, #075bc9 0%, #064cb1 56%, #043d91 100%);
+      color: #ffffff; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.14); box-shadow: var(--shadow-header);
+    }
+    .app-header h1 {
+      margin: 0; color: #ffffff; font-size: clamp(15px, 4.2vw, 17px); font-weight: 800;
+    }
+    .app-header h1::before {
+      content: ""; display: block; width: 44px; height: 44px; margin: 0 auto 5px;
+      background-image: url("https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgu4CQYNMcMdpEL4zfQp6eyCtTH5NqpnmXr2JOOI6QPi8ktsfylvEpeBK7FOlYSMGBq6hnZy75XvATm2VRmrVcXR0C39joe_v_GrAaosLdsrE6k1E5FjHY0ky-OdpIt3MnGhyphenhyphenJmRB7JAabdZdIu-b-fFGB26BP6Us39vtkJGnW2rlzEjTk0e-jgfTVGuoUY/s512/49cc3a15-ea1a-4b69-98d7-02fa415fb250%20(1).png");
+      background-size: contain; background-repeat: no-repeat; background-position: center;
+    }
+    .app-header p { margin: 2px 0 0; color: rgba(255,255,255,0.84); font-size: clamp(12px, 3vw, 13px); font-weight: 500; }
+
+    /* Offline Indicator Bar */
+    #offlineBar {
+      display: none; background: #e11d48; color: #ffffff; text-align: center;
+      padding: 6px 12px; font-size: 11.5px; font-weight: 700;
+    }
+    #offlineBar.active { display: block; }
+    #syncBadge {
+      display: inline-block; background: #fff; color: #e11d48; border-radius: 999px;
+      padding: 1px 7px; margin-left: 6px; font-size: 10px;
+    }
+
+    .container { width: 100%; max-width: 680px; margin: 0 auto; padding: 10px 12px 0; }
+    .card {
+      width: 100%; padding: 16px 12px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+    }
+    .card + .card { margin-top: 12px; }
+    .text-center { text-align: center; }
+    .section-title { margin: 0 0 15px; padding-bottom: 9px; color: #17345f; border-bottom: 1px solid #edf1f6; font-size: 15px; font-weight: 800; }
+
+    /* Form & Elements */
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; margin-bottom: 6px; color: #344256; font-size: 13px; font-weight: 700; }
+    select, input[type="password"], input[type="text"], input[type="date"], textarea {
+      display: block; width: 100%; min-height: 46px; padding: 10px 11px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-sm); outline: none;
+      background: #fbfcfe; color: var(--text); font-size: 14px;
+    }
+    select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2369788c' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; background-size: 15px;
+    }
+    select:focus, input:focus, textarea:focus { border-color: var(--primary); background: #ffffff; box-shadow: 0 0 0 3px rgba(7, 91, 201, 0.09); }
+
+    .password-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: #64748b; font-size: 12.5px; cursor: pointer; }
+    .btn {
+      width: 100%; min-height: 46px; padding: 11px 10px; border: none; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: 13.5px; font-weight: 800; transition: transform 0.1s ease;
+    }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+    .btn-primary { background: linear-gradient(135deg, #0866dc, #054caf); color: #ffffff; }
+    .btn-success { background: #159447; color: #ffffff; }
+    .btn-secondary { border: 1px solid #d9e1eb; background: #eef2f6; color: #465466; }
+    .btn-danger-soft { border: 1px solid #f4d1d1; background: #fff3f3; color: #b42318; }
+    .btn-outline { border: 1px solid var(--border-strong); background: #ffffff; color: var(--text-secondary); }
+    .button-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+    /* Identity Card */
+    .identity-card { overflow: hidden; padding: 0 12px 11px; background: #ffffff; border: 1px solid #dfe6ef; border-radius: 12px; }
+    .identity-card h2 {
+      margin: 0 -12px 10px; padding: 9px 12px; background: linear-gradient(135deg, #0961d2, #064cb1);
+      color: #ffffff; font-size: 14.5px; font-weight: 800;
+    }
+    .identity-grid { display: grid; grid-template-columns: 1fr; font-size: 12.5px; color: var(--text-secondary); }
+    .identity-grid > div {
+      display: grid; grid-template-columns: minmax(90px, 30%) 1fr; gap: 4px; padding: 4px 0; border-bottom: 1px solid #edf1f5;
+    }
+    .identity-grid strong { color: #111827; }
+    .identity-grid strong::before { content: ": "; color: #64748b; }
+
+    /* Siswa & Status */
+    .status-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; text-align: center; }
+    .legend-item { padding: 6px 1px; border: 1px solid var(--border); border-radius: 6px; font-size: 10px; font-weight: 800; }
+    .legend-h { background: #eff6ff; color: #1565c0; border-color: #bfdbfe; }
+    .legend-s { background: #f0fdf4; color: #2e7d32; border-color: #bbf7d0; }
+    .legend-i { background: #fff7ed; color: #ef6c00; border-color: #fed7aa; }
+    .legend-a { background: #fef2f2; color: #c62828; border-color: #fecaca; }
+
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 12px; text-align: center; }
+    .summary-box { padding: 8px 1px; border-radius: 8px; color: #fff; }
+    .summary-box:nth-child(1) { background: #1565c0; }
+    .summary-box:nth-child(2) { background: #2e7d32; }
+    .summary-box:nth-child(3) { background: #ef6c00; }
+    .summary-box:nth-child(4) { background: #c62828; }
+    .summary-number { font-size: 19px; font-weight: 800; display: block; }
+    .summary-label { font-size: 9.5px; display: block; }
+
+    .siswa-list { display: grid; gap: 7px; }
+    .siswa-row { padding: 9px; border: 1px solid #e1e7ef; border-radius: 10px; background: #fff; }
+    .siswa-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+    .siswa-number { width: 24px; height: 24px; border-radius: 6px; background: #edf5ff; color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; }
+    .siswa-name { font-weight: 750; font-size: 13.5px; }
+    .siswa-nis { font-size: 10.5px; color: #8893a3; }
+
+    .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .status-option { position: relative; cursor: pointer; }
+    .status-option input { position: absolute; opacity: 0; }
+    .status-option span {
+      display: flex; align-items: center; justify-content: center; min-height: 38px;
+      border: 1px solid #dce3ec; border-radius: 7px; background: #f8fafc; color: #697586;
+      font-weight: 800; font-size: 11px;
+    }
+    .status-option input[value="Hadir"]:checked + span { background: #1565c0; color: #fff; border-color: #1565c0; }
+    .status-option input[value="Sakit"]:checked + span { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+    .status-option input[value="Izin"]:checked + span { background: #ef6c00; color: #fff; border-color: #ef6c00; }
+    .status-option input[value="Alpa"]:checked + span { background: #c62828; color: #fff; border-color: #c62828; }
+
+    .catatan-wrap { margin-top: 6px; }
+    .catatan-toggle { border: none; background: transparent; color: var(--primary); font-size: 10.5px; font-weight: 700; cursor: pointer; }
+    .catatan-input { width: 100%; min-height: 48px; margin-top: 4px; padding: 7px 9px; border: 1px solid #dce3ec; border-radius: 6px; font-size: 12px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 2000;
+      visibility: hidden; width: calc(100% - 24px); max-width: 460px; padding: 11px 13px;
+      transform: translate(-50%, 10px); border-radius: 9px; background: #172033; color: #ffffff;
+      opacity: 0; text-align: center; font-size: 12px; font-weight: 650; box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      transition: all 0.2s ease;
+    }
+    #toast.show { visibility: visible; opacity: 1; transform: translate(-50%, 0); }
+    #toast.success { background: #075bc9; }
+    #toast.error { background: #b42318; }
+    #toast.warning { background: #c25a08; }
+  </style>
+</head>
+
+<body>
+  <!-- Offline Bar -->
+  <div id="offlineBar">
+    Mode Offline: Data tersimpan di HP <span id="syncBadge">0 Tersimpan</span>
+  </div>
+
+  <header class="app-header">
+    <h1 id="appTitle">Absensi Pembelajaran Digital (APD)</h1>
+    <p id="appSubtitle">SMKN 3 Bondowoso</p>
+  </header>
+
+  <main class="container">
+    <!-- HALAMAN LOGIN -->
+    <section id="loginPage" class="card">
+      <div class="text-center" style="margin-bottom: 14px;">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 800;">Portal Guru</h2>
+        <p style="margin: 4px 0 0; color: var(--muted); font-size: 13px;">Pilih nama guru dan masukkan kode akses.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="guruSelect">Nama Guru</label>
+        <select id="guruSelect">
+          <option value="">Memuat daftar guru...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="kodeAkses">Kode Akses</label>
+        <input type="password" id="kodeAkses" placeholder="Masukkan kode akses">
+        <label class="password-row">
+          <input type="checkbox" onchange="document.getElementById('kodeAkses').type = this.checked ? 'text' : 'password'">
+          <span>Tampilkan kode akses</span>
+        </label>
+      </div>
+
+      <button id="btnLogin" type="button" class="btn btn-primary" onclick="prosesLogin()">
+        Masuk ke Sistem
+      </button>
+    </section>
+
+    <!-- HALAMAN PILIHAN -->
+    <section id="selectionPage" class="hidden">
+      <div class="card identity-card">
+        <h2>Absensi Pembelajaran</h2>
+        <div class="identity-grid">
+          <div>Guru<strong id="selectionGuru">-</strong></div>
+          <div>Tanggal<strong id="selectionTanggal">-</strong></div>
+          <div>Semester<strong id="selectionSemester">-</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="section-title">Pilih Kelas & Mapel</h3>
+        <div class="form-group">
+          <label class="form-label" for="mapelSelect">Mata Pelajaran</label>
+          <select id="mapelSelect" onchange="periksaPilihanForm()"><option value="">Pilih mata pelajaran</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="kelasSelect">Kelas</label>
+          <select id="kelasSelect" onchange="periksaPilihanForm()"><option value="">Pilih kelas</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="jpSelect">Jam Pelajaran</label>
+          <select id="jpSelect" onchange="periksaPilihanForm()"><option value="">Pilih jam pelajaran</option></select>
+        </div>
+
+        <button id="btnBukaSiswa" type="button" class="btn btn-primary" onclick="bukaDaftarSiswa()" disabled>
+          Buka Daftar Siswa
+        </button>
+
+        <!-- Tombol Rekap dengan Guard Check Koneksi -->
+        <button id="btnRekapGuru" type="button" class="btn btn-outline" style="margin-top: 10px;" onclick="mintaRekapGuru()">
+          Rekap Absensi Saya (Google Sheet)
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-danger-soft" style="margin-top: 14px;" onclick="logout()">
+        Keluar dari Sistem
+      </button>
+    </section>
+
+    <!-- HALAMAN FORM ABSENSI -->
+    <section id="attendancePage" class="hidden">
+      <div class="card identity-card">
+        <h2>Form Absensi Siswa</h2>
+        <div class="identity-grid">
+          <div>Guru<strong id="attGuru">-</strong></div>
+          <div>Mapel<strong id="attMapel">-</strong></div>
+          <div>Kelas<strong id="attKelas">-</strong></div>
+          <div>JP<strong id="attJp">-</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <form id="attendanceForm" onsubmit="event.preventDefault(); simpanAbsensiHandler();">
+          <div class="status-legend">
+            <div class="legend-item legend-h">H = Hadir</div>
+            <div class="legend-item legend-s">S = Sakit</div>
+            <div class="legend-item legend-i">I = Izin</div>
+            <div class="legend-item legend-a">A = Alpa</div>
+          </div>
+
+          <div class="summary">
+            <div class="summary-box"><span id="sumH" class="summary-number">0</span><span class="summary-label">Hadir</span></div>
+            <div class="summary-box"><span id="sumS" class="summary-number">0</span><span class="summary-label">Sakit</span></div>
+            <div class="summary-box"><span id="sumI" class="summary-number">0</span><span class="summary-label">Izin</span></div>
+            <div class="summary-box"><span id="sumA" class="summary-number">0</span><span class="summary-label">Alpa</span></div>
+          </div>
+
+          <div id="siswaArea" class="siswa-list"></div>
+
+          <button id="btnSubmit" type="submit" class="btn btn-success" style="margin-top: 18px;">
+            Simpan Absensi
+          </button>
+        </form>
+      </div>
+
+      <button type="button" class="btn btn-secondary" style="margin-top: 10px;" onclick="kembaliKePilihan()">
+        Kembali
+      </button>
+    </section>
+  </main>
+
+  <div id="toast">Pesan</div>
+
+  <script>
+    // ========================================================
+    // KONFIGURASI URL API BACKEND
+    // ========================================================
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3VPeG7cFV5i0FvWR1mYJZdr-vp3TpAAAyxB9cUcHUV72ttgnLtd3_2ywE85Ri7Vuf/exec';
+
+    // State Aplikasi
+    const appState = {
+      guru: null,
+      mapelList: [],
+      kelasList: [],
+      jpList: [],
+      siswa: [],
+      selectedMapel: null,
+      selectedKelas: null,
+      selectedJp: null,
+      tanggalDatabase: ''
+    };
+
+    // ========================================================
+    // REGISTER SERVICE WORKER (PWA)
+    // ========================================================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(() => {
+          console.log('Service Worker Registered');
+        }).catch((err) => {
+          console.warn('SW Registration Failed:', err);
+        });
+      });
+    }
+
+    // ========================================================
+    // DATABASE OFFLINE (IndexedDB)
+    // ========================================================
+    function bukaDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('APD_Offline_DB', 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('master')) {
+            db.createObjectStore('master');
+          }
+          if (!db.objectStoreNames.contains('antrean_absensi')) {
+            db.createObjectStore('antrean_absensi', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function simpanMasterOffline(key, data) {
+      const db = await bukaDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('master', 'readwrite');
+        tx.objectStore('master').put(data, key);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    async function ambilMasterOffline(key) {
+      const db = await bukaDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('master', 'readonly');
+        const req = tx.objectStore('master').get(key);
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+
+    async function simpanAntreanAbsensi(payload) {
+      const db = await bukaDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('antrean_absensi', 'readwrite');
+        tx.objectStore('antrean_absensi').add({
+          waktu: new Date().toISOString(),
+          payload: payload
+        });
+        tx.oncomplete = () => {
+          updateOfflineBar();
+          resolve();
+        };
+      });
+    }
+
+    async function hitungAntreanOffline() {
+      const db = await bukaDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('antrean_absensi', 'readonly');
+        const req = tx.objectStore('antrean_absensi').count();
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+
+    async function updateOfflineBar() {
+      const bar = document.getElementById('offlineBar');
+      const badge = document.getElementById('syncBadge');
+      const count = await hitungAntreanOffline();
+
+      if (!navigator.onLine || count > 0) {
+        bar.classList.add('active');
+        badge.textContent = count + ' Antrean';
+      } else {
+        bar.classList.remove('active');
+      }
+    }
+
+    // ========================================================
+    // NETWORK WRAPPER (Fetch Helper)
+    // ========================================================
+    async function requestApi(action, payload = null, method = 'POST') {
+      if (method === 'GET') {
+        const url = `${SCRIPT_URL}?action=${action}`;
+        const res = await fetch(url);
+        return await res.json();
+      } else {
+        const res = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: action, payload: payload })
+        });
+        return await res.json();
+      }
+    }
+
+    // ========================================================
+    // SINKRONISASI OTOMATIS SAAT ONLINE
+    // ========================================================
+    window.addEventListener('online', async () => {
+      showToast('Koneksi terhubung. Memulai sinkronisasi...', 'success');
+      updateOfflineBar();
+      await prosesSinkronisasiAntrean();
+    });
+
+    window.addEventListener('offline', () => {
+      showToast('Anda dalam mode offline. Absensi tetap dapat dilakukan.', 'warning');
+      updateOfflineBar();
+    });
+
+    async function prosesSinkronisasiAntrean() {
+      const db = await bukaDB();
+      const tx = db.transaction('antrean_absensi', 'readonly');
+      const store = tx.objectStore('antrean_absensi');
+      const req = store.getAll();
+
+      req.onsuccess = async () => {
+        const items = req.result;
+        if (!items || items.length === 0) return;
+
+        for (const item of items) {
+          try {
+            const res = await requestApi('simpanAbsensi', item.payload);
+            if (res && res.sukses) {
+              const delTx = db.transaction('antrean_absensi', 'readwrite');
+              delTx.objectStore('antrean_absensi').delete(item.id);
+            }
+          } catch (e) {
+            console.warn('Gagal sync item:', item.id, e);
+          }
+        }
+        updateOfflineBar();
+        showToast('Sinkronisasi selesai. Seluruh data telah masuk server.', 'success');
+      };
+    }
+
+    // ========================================================
+    // INISIALISASI
+    // ========================================================
+    window.addEventListener('load', async () => {
+      updateOfflineBar();
+      await muatDataLogin();
+    });
+
+    async function muatDataLogin() {
+      try {
+        let data;
+        if (navigator.onLine) {
+          const res = await requestApi('getDataAwalLogin', null, 'GET');
+          if (res && res.sukses) {
+            data = res.data;
+            await simpanMasterOffline('dataAwalLogin', data);
+          }
+        } else {
+          data = await ambilMasterOffline('dataAwalLogin');
+        }
+
+        if (data && data.daftarGuru) {
+          isiDropdownGuru(data.daftarGuru);
+        }
+      } catch (err) {
+        showToast('Gagal memuat daftar guru.', 'error');
+      }
+    }
+
+    function isiDropdownGuru(daftar) {
+      const select = document.getElementById('guruSelect');
+      select.innerHTML = '<option value="">Pilih nama guru</option>';
+      daftar.forEach((g) => {
+        const opt = document.createElement('option');
+        opt.value = g.idGuru;
+        opt.textContent = g.namaLengkap;
+        select.appendChild(opt);
+      });
+    }
+
+    // ========================================================
+    // ALUR LOGIN
+    // ========================================================
+    async function prosesLogin() {
+      const idGuru = document.getElementById('guruSelect').value;
+      const kodeAkses = document.getElementById('kodeAkses').value.trim();
+
+      if (!idGuru || !kodeAkses) {
+        showToast('Pilih nama guru dan masukkan kode akses.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.textContent = 'Memverifikasi...';
+
+      try {
+        let res;
+        if (navigator.onLine) {
+          res = await requestApi('validasiLoginGuru', { idGuru, kodeAkses });
+          if (res && res.sukses) {
+            appState.guru = res.data;
+            await simpanMasterOffline('profilGuru_' + idGuru, res.data);
+          }
+        } else {
+          // Login offline menggunakan cache profil
+          const cached = await ambilMasterOffline('profilGuru_' + idGuru);
+          if (cached) {
+            res = { sukses: true, data: cached };
+            appState.guru = cached;
+          } else {
+            res = { sukses: false, pesan: 'Profil belum pernah disimpan online di HP ini.' };
+          }
+        }
+
+        if (res && res.sukses) {
+          tampilkanHalaman('selectionPage');
+          await muatDataAwalGuru();
+        } else {
+          showToast(res ? res.pesan : 'Login gagal.', 'error');
+        }
+      } catch (e) {
+        showToast('Terjadi kesalahan verifikasi.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Masuk ke Sistem';
+      }
+    }
+
+    // ========================================================
+    // ALUR PEMILIHAN KELAS & JP
+    // ========================================================
+    async function muatDataAwalGuru() {
+      document.getElementById('selectionGuru').textContent = appState.guru.namaLengkap;
+
+      let data;
+      if (navigator.onLine) {
+        const res = await requestApi('getDataAwalGuru', { idGuru: appState.guru.idGuru }, 'GET');
+        if (res && res.sukses) {
+          data = res.data;
+          await simpanMasterOffline('dataAwalGuru_' + appState.guru.idGuru, data);
+        }
+      } else {
+        data = await ambilMasterOffline('dataAwalGuru_' + appState.guru.idGuru);
+      }
+
+      if (!data) {
+        showToast('Data master guru tidak tersedia secara offline.', 'error');
+        return;
+      }
+
+      appState.mapelList = data.guru.mapel || [];
+      appState.kelasList = data.kelas || [];
+      appState.jpList = data.jp || [];
+      appState.tanggalDatabase = data.tanggal ? data.tanggal.database : new Date().toISOString().split('T')[0];
+
+      document.getElementById('selectionTanggal').textContent = data.tanggal ? data.tanggal.lengkap : '-';
+      document.getElementById('selectionSemester').textContent = data.aplikasi ? (data.aplikasi.semester + ' ' + data.aplikasi.tahunPelajaran) : '-';
+
+      isiDropdown('mapelSelect', appState.mapelList, 'idMapel', 'namaMapel', 'Pilih mata pelajaran');
+      isiDropdown('kelasSelect', appState.kelasList, 'idKelas', 'namaKelas', 'Pilih kelas');
+      isiDropdown('jpSelect', appState.jpList, 'jp', 'label', 'Pilih jam pelajaran');
+    }
+
+    function isiDropdown(elemId, list, valKey, textKey, defaultText) {
+      const el = document.getElementById(elemId);
+      el.innerHTML = `<option value="">${defaultText}</option>`;
+      list.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item[valKey];
+        opt.textContent = item[textKey];
+        el.appendChild(opt);
+      });
+    }
+
+    function periksaPilihanForm() {
+      const m = document.getElementById('mapelSelect').value;
+      const k = document.getElementById('kelasSelect').value;
+      const j = document.getElementById('jpSelect').value;
+      document.getElementById('btnBukaSiswa').disabled = !(m && k && j);
+    }
+
+    // ========================================================
+    // ALUR FORM ABSENSI
+    // ========================================================
+    async function bukaDaftarSiswa() {
+      const idMapel = document.getElementById('mapelSelect').value;
+      const idKelas = document.getElementById('kelasSelect').value;
+      const jp = document.getElementById('jpSelect').value;
+
+      appState.selectedMapel = appState.mapelList.find(x => String(x.idMapel) === String(idMapel));
+      appState.selectedKelas = appState.kelasList.find(x => String(x.idKelas) === String(idKelas));
+      appState.selectedJp = appState.jpList.find(x => String(x.jp) === String(jp));
+
+      document.getElementById('attGuru').textContent = appState.guru.namaLengkap;
+      document.getElementById('attMapel').textContent = appState.selectedMapel.namaMapel;
+      document.getElementById('attKelas').textContent = appState.selectedKelas.namaKelas;
+      document.getElementById('attJp').textContent = appState.selectedJp.label;
+
+      tampilkanHalaman('attendancePage');
+
+      const payload = {
+        idGuru: appState.guru.idGuru,
+        idMapel: idMapel,
+        idKelas: idKelas,
+        jp: Number(jp),
+        tanggal: appState.tanggalDatabase
+      };
+
+      try {
+        let res;
+        if (navigator.onLine) {
+          res = await requestApi('getDataFormAbsensi', payload);
+          if (res && res.sukses) {
+            await simpanMasterOffline(`formSiswa_${idKelas}`, res.data.siswa);
+          }
+        } else {
+          // Ambil daftar siswa yang tersimpan offline
+          const siswaCached = await ambilMasterOffline(`formSiswa_${idKelas}`);
+          if (siswaCached) {
+            res = { sukses: true, data: { siswa: siswaCached } };
+          } else {
+            res = { sukses: false, pesan: 'Daftar siswa kelas ini belum pernah dicache saat online.' };
+          }
+        }
+
+        if (res && res.sukses) {
+          renderDaftarSiswa(res.data.siswa);
+        } else {
+          showToast(res ? res.pesan : 'Gagal memuat siswa.', 'error');
+        }
+      } catch (err) {
+        showToast('Terjadi kesalahan memuat data siswa.', 'error');
+      }
+    }
+
+    function renderDaftarSiswa(siswaList) {
+      appState.siswa = siswaList;
+      const area = document.getElementById('siswaArea');
+      area.innerHTML = '';
+
+      siswaList.forEach((sw, idx) => {
+        const row = document.createElement('div');
+        row.className = 'siswa-row';
+        row.innerHTML = `
+          <div class="siswa-head">
+            <div class="siswa-number">${idx + 1}</div>
+            <div>
+              <div class="siswa-name">${escapeHtml(sw.nama)}</div>
+              <div class="siswa-nis">NIS: ${escapeHtml(sw.nis)}</div>
+            </div>
+          </div>
+          <div class="status-grid">
+            ${buatRadioStatus(idx, 'Hadir', 'H', sw.status || 'Hadir')}
+            ${buatRadioStatus(idx, 'Sakit', 'S', sw.status)}
+            ${buatRadioStatus(idx, 'Izin', 'I', sw.status)}
+            ${buatRadioStatus(idx, 'Alpa', 'A', sw.status)}
+          </div>
+          <div class="catatan-wrap">
+            <button type="button" class="catatan-toggle" onclick="toggleCatatan(${idx})">+ Catatan</button>
+            <textarea id="cat_${idx}" class="catatan-input hidden" placeholder="Catatan opsional">${escapeHtml(sw.catatan || '')}</textarea>
+          </div>
+        `;
+        area.appendChild(row);
+      });
+
+      area.querySelectorAll('input[type="radio"]').forEach((r) => {
+        r.addEventListener('change', hitungRingkasan);
+      });
+      hitungRingkasan();
+    }
+
+    function buatRadioStatus(idx, val, label, currVal) {
+      const checked = val === currVal ? 'checked' : '';
+      return `
+        <label class="status-option">
+          <input type="radio" name="status_${idx}" value="${val}" ${checked}>
+          <span>${label}</span>
+        </label>
+      `;
+    }
+
+    function toggleCatatan(idx) {
+      const el = document.getElementById('cat_' + idx);
+      el.classList.toggle('hidden');
+      if (!el.classList.contains('hidden')) el.focus();
+    }
+
+    function hitungRingkasan() {
+      let h = 0, s = 0, i = 0, a = 0;
+      appState.siswa.forEach((_, idx) => {
+        const sel = document.querySelector(`input[name="status_${idx}"]:checked`);
+        if (sel) {
+          if (sel.value === 'Hadir') h++;
+          else if (sel.value === 'Sakit') s++;
+          else if (sel.value === 'Izin') i++;
+          else if (sel.value === 'Alpa') a++;
+        }
+      });
+      document.getElementById('sumH').textContent = h;
+      document.getElementById('sumS').textContent = s;
+      document.getElementById('sumI').textContent = i;
+      document.getElementById('sumA').textContent = a;
+    }
+
+    // ========================================================
+    // SIMPAN ABSENSI (DUAL-MODE: ONLINE & OFFLINE)
+    // ========================================================
+    async function simpanAbsensiHandler() {
+      const daftarSiswaPayload = [];
+      for (let idx = 0; idx < appState.siswa.length; idx++) {
+        const sel = document.querySelector(`input[name="status_${idx}"]:checked`);
+        if (!sel) {
+          showToast(`Siswa nomor ${idx + 1} belum diabsen.`, 'error');
+          return;
+        }
+        daftarSiswaPayload.push({
+          nis: appState.siswa[idx].nis,
+          status: sel.value,
+          catatan: document.getElementById('cat_' + idx).value.trim()
+        });
+      }
+
+      const payload = {
+        idGuru: appState.guru.idGuru,
+        idMapel: appState.selectedMapel.idMapel,
+        idKelas: appState.selectedKelas.idKelas,
+        jp: appState.selectedJp.jp,
+        tanggal: appState.tanggalDatabase,
+        daftarSiswa: daftarSiswaPayload
+      };
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      if (navigator.onLine) {
+        // Online Langsung
+        try {
+          const res = await requestApi('simpanAbsensi', payload);
+          if (res && res.sukses) {
+            showToast('Absensi berhasil disimpan ke Spreadsheet!', 'success');
+            kembaliKePilihan();
+          } else {
+            showToast(res ? res.pesan : 'Gagal menyimpan absensi.', 'error');
+          }
+        } catch (e) {
+          showToast('Koneksi terganggu. Data dialihkan ke penyimpanan offline.', 'warning');
+          await simpanAntreanAbsensi(payload);
+          kembaliKePilihan();
+        }
+      } else {
+        // Offline: Simpan ke antrean lokal
+        await simpanAntreanAbsensi(payload);
+        showToast('Disimpan secara offline di HP. Akan disinkronkan saat ada internet.', 'warning');
+        kembaliKePilihan();
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Simpan Absensi';
+    }
+
+    // ========================================================
+    // GENERATE REKAP DENGAN GUARD CHECK KONEKSI (OPSI 2)
+    // ========================================================
+    async function mintaRekapGuru() {
+      if (!navigator.onLine) {
+        showToast('Fitur ini memerlukan koneksi internet untuk membuat file di Google Drive. Silakan hubungkan internet terlebih dahulu.', 'warning');
+        return;
+      }
+
+      const idMapel = document.getElementById('mapelSelect').value;
+      const idKelas = document.getElementById('kelasSelect').value;
+
+      if (!idMapel || !idKelas) {
+        showToast('Pilih mata pelajaran dan kelas terlebih dahulu.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnRekapGuru');
+      btn.disabled = true;
+      btn.textContent = 'Membuat Rekap...';
+
+      try {
+        const payload = {
+          idGuru: appState.guru.idGuru,
+          idMapel: idMapel,
+          idKelas: idKelas
+        };
+        const res = await requestApi('generateRekapGuru', payload);
+        if (res && res.sukses) {
+          showToast('Rekap berhasil dibuat!', 'success');
+          if (res.data && res.data.url) {
+            window.open(res.data.url, '_blank');
+          }
+        } else {
+          showToast(res ? res.pesan : 'Gagal membuat rekap.', 'error');
+        }
+      } catch (err) {
+        showToast('Terjadi kesalahan pembuatan rekap.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Rekap Absensi Saya (Google Sheet)';
+      }
+    }
+
+    // ========================================================
+    // HELPER UI
+    // ========================================================
+    function tampilkanHalaman(id) {
+      ['loginPage', 'selectionPage', 'attendancePage'].forEach(p => {
+        document.getElementById(p).classList.add('hidden');
+      });
+      document.getElementById(id).classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function kembaliKePilihan() {
+      tampilkanHalaman('selectionPage');
+    }
+
+    function logout() {
+      appState.guru = null;
+      document.getElementById('guruSelect').value = '';
+      document.getElementById('kodeAkses').value = '';
+      tampilkanHalaman('loginPage');
+      showToast('Anda telah keluar.', 'success');
+    }
+
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'show ' + type;
+      setTimeout(() => { t.className = ''; }, 4500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
