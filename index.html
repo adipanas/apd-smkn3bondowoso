@@ -2279,14 +2279,18 @@ textarea:disabled {
       }
 
       const btn = document.getElementById('btnBukaSiswa');
-      setButtonLoading(btn, true, 'Memuat pilihan...');
+      setButtonLoading(btn, true, 'Memuat data...');
 
       try {
         let res;
         if (navigator.onLine) {
-          res = await requestApi('getDataAwalGuru', { idGuru: appState.guru.idGuru }, 'GET');
+          res = await requestApi('getDataAwalGuru', { idGuru: appState.guru.idGuru });
           if (res && res.sukses) {
             await simpanMasterOffline('dataAwalGuru_' + appState.guru.idGuru, res);
+            // Simpan master JP agar bisa dipakai kapan saja saat offline
+            if (res.data && res.data.jp) {
+              await simpanMasterOffline('master_jp_list', res.data.jp);
+            }
           }
         } else {
           res = await ambilMasterOffline('dataAwalGuru_' + appState.guru.idGuru);
@@ -2440,26 +2444,83 @@ textarea:disabled {
       const jpSelect = document.getElementById('jpSelect');
       jpSelect.innerHTML = '<option value="">Memuat jam pelajaran...</option>';
 
-      try {
-        const res = await requestApi('getDaftarJpDanJadwalTanggal', { tanggal: tanggalPilihan }, 'GET');
-        if (res && res.sukses && res.data) {
-          appState.hari = res.data.hari;
-          appState.tanggalLengkap = res.data.tanggalLengkap;
-          appState.jpList = res.data.jp || [];
-          appState.jadwal = res.data.jadwal || null;
+      // 1. Jika Sedang Online -> Minta ke Server & Simpan Cache
+      if (navigator.onLine) {
+        try {
+          const res = await requestApi('getDaftarJpDanJadwalTanggal', { tanggal: tanggalPilihan });
+          if (res && res.sukses && res.data) {
+            appState.hari = res.data.hari;
+            appState.tanggalLengkap = res.data.tanggalLengkap;
+            appState.jpList = res.data.jp || [];
+            appState.jadwal = res.data.jadwal || null;
 
-          document.getElementById('selectionTanggal').textContent = res.data.tanggalLengkap;
-          isiDropdownJp(appState.jpList);
-          tampilkanInformasiJadwalKhusus(appState.jadwal);
-          periksaPilihanForm();
-        } else {
-          jpSelect.innerHTML = '<option value="">Pilih jam pelajaran</option>';
-          showToast(res && res.pesan ? res.pesan : 'Gagal memuat jam pelajaran.', 'error');
+            document.getElementById('selectionTanggal').textContent = res.data.tanggalLengkap;
+            isiDropdownJp(appState.jpList);
+            tampilkanInformasiJadwalKhusus(appState.jadwal);
+            periksaPilihanForm();
+            return;
+          }
+        } catch (err) {
+          console.warn('Gagal fetch online, beralih ke hitung lokal:', err);
         }
-      } catch (err) {
-        jpSelect.innerHTML = '<option value="">Pilih jam pelajaran</option>';
-        showToast(getErrorMessage(err), 'error');
       }
+
+      // 2. Mode Offline (Fallback Lokal)
+      try {
+        const dateObj = new Date(tanggalPilihan + 'T12:00:00');
+        const hariArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const bulanArr = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        
+        const namaHari = hariArr[dateObj.getDay()];
+        const tglLengkap = namaHari + ', ' + dateObj.getDate() + ' ' + bulanArr[dateObj.getMonth()] + ' ' + dateObj.getFullYear();
+        
+        appState.hari = namaHari;
+        appState.tanggalLengkap = tglLengkap;
+        document.getElementById('selectionTanggal').textContent = tglLengkap;
+
+        // Ambil master JP yang tersimpan saat online pertama kali
+        const cachedMaster = await ambilMasterOffline('master_jp_list') || [];
+        const day = dateObj.getDay();
+
+        let jpAktif = [];
+        if (day >= 1 && day <= 4) {
+          // Senin - Kamis: JP 1 - 11
+          jpAktif = cachedMaster.length > 0 ? cachedMaster.filter(j => j.jp <= 11) : buatJpDefault_(11);
+        } else if (day === 5) {
+          // Jumat: JP 1 - 6
+          jpAktif = cachedMaster.length > 0 ? cachedMaster.filter(j => j.jp <= 6) : buatJpDefault_(6);
+        } else {
+          // Sabtu / Minggu
+          jpAktif = [];
+        }
+
+        appState.jpList = jpAktif;
+        appState.jadwal = null;
+
+        isiDropdownJp(appState.jpList);
+        tampilkanInformasiJadwalKhusus(null);
+        periksaPilihanForm();
+
+        if (jpAktif.length === 0) {
+          jpSelect.innerHTML = '<option value="">Hari libur (Tidak ada JP)</option>';
+        }
+      } catch (errOffline) {
+        jpSelect.innerHTML = '<option value="">Pilih jam pelajaran</option>';
+        showToast('Gagal memproses tanggal saat offline.', 'error');
+      }
+    }
+
+    // Helper untuk membentuk struktur JP jika belum ada cache
+    function buatJpDefault_(maxJp) {
+      const hasil = [];
+      for (let i = 1; i <= maxJp; i++) {
+        hasil.push({
+          jp: i,
+          label: 'JP ' + i,
+          waktu: '-'
+        });
+      }
+      return hasil;
     }
 
     async function bukaDaftarSiswa() {
@@ -2497,22 +2558,56 @@ textarea:disabled {
       try {
         let res;
         if (navigator.onLine) {
-          res = await requestApi('getDataFormAbsensi', payload, 'POST');
+          res = await requestApi('getDataFormAbsensi', payload);
           if (res && res.sukses) {
+            // Simpan cache per kelas agar siswa selalu ada meskipun ganti tanggal/JP saat offline
+            await simpanMasterOffline('daftarSiswaKelas_' + idKelas, res.data.siswa);
             await simpanMasterOffline('formAbsensi_' + idKelas + '_' + jp, res);
           }
         } else {
+          // Buka cache spesifik sesi atau gunakan cache master siswa kelas
           res = await ambilMasterOffline('formAbsensi_' + idKelas + '_' + jp);
+          if (!res) {
+            const listSiswaKelas = await ambilMasterOffline('daftarSiswaKelas_' + idKelas);
+            if (listSiswaKelas && listSiswaKelas.length > 0) {
+              res = {
+                sukses: true,
+                data: {
+                  sudahAbsen: false,
+                  guru: appState.guru,
+                  mapel: appState.selectedMapel,
+                  kelas: appState.selectedKelas,
+                  jp: appState.selectedJp,
+                  tanggalLengkap: appState.tanggalLengkap,
+                  siswa: listSiswaKelas.map(s => Object.assign({}, s, { status: '', catatan: '' }))
+                }
+              };
+            }
+          }
         }
 
         if (!res || !res.sukses) {
-          tampilkanErrorAbsensi(res && res.pesan ? res.pesan : 'Data siswa gagal dimuat.');
+          tampilkanErrorAbsensi(res && res.pesan ? res.pesan : 'Data siswa belum pernah tersimpan di HP. Buka kelas ini sekali saat online.');
           return;
         }
 
         renderFormAbsensi(res.data);
       } catch (error) {
-        tampilkanErrorAbsensi(getErrorMessage(error));
+        // Fallback terakhir: jika fetch gagal karena mendadak offline
+        const listSiswaKelas = await ambilMasterOffline('daftarSiswaKelas_' + idKelas);
+        if (listSiswaKelas && listSiswaKelas.length > 0) {
+          renderFormAbsensi({
+            sudahAbsen: false,
+            guru: appState.guru,
+            mapel: appState.selectedMapel,
+            kelas: appState.selectedKelas,
+            jp: appState.selectedJp,
+            tanggalLengkap: appState.tanggalLengkap,
+            siswa: listSiswaKelas.map(s => Object.assign({}, s, { status: '', catatan: '' }))
+          });
+        } else {
+          tampilkanErrorAbsensi('Koneksi terputus dan data kelas ini belum tersimpan di memori HP.');
+        }
       }
     }
 
