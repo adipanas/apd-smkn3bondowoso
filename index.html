@@ -419,19 +419,25 @@
     // NETWORK WRAPPER (Fetch Helper)
     // ========================================================
     async function requestApi(action, payload = null, method = 'POST') {
-      if (method === 'GET') {
-        const url = `${SCRIPT_URL}?action=${action}`;
-        const res = await fetch(url);
-        return await res.json();
-      } else {
-        const res = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: action, payload: payload })
-        });
-        return await res.json();
-      }
+  if (method === 'GET') {
+    let url = `${SCRIPT_URL}?action=${encodeURIComponent(action)}`;
+    if (payload && typeof payload === 'object') {
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== null && payload[key] !== undefined) {
+          url += `&${encodeURIComponent(key)}=${encodeURIComponent(payload[key])}`;
+        }
+      });
     }
-
+    const res = await fetch(url);
+    return await res.json();
+  } else {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: action, payload: payload })
+    });
+    return await res.json();
+  }
+}
     // ========================================================
     // SINKRONISASI OTOMATIS SAAT ONLINE
     // ========================================================
@@ -565,36 +571,45 @@
     // ALUR PEMILIHAN KELAS & JP
     // ========================================================
     async function muatDataAwalGuru() {
-      document.getElementById('selectionGuru').textContent = appState.guru.namaLengkap;
+  document.getElementById('selectionGuru').textContent = appState.guru.namaLengkap;
 
-      let data;
-      if (navigator.onLine) {
-        const res = await requestApi('getDataAwalGuru', { idGuru: appState.guru.idGuru }, 'GET');
-        if (res && res.sukses) {
-          data = res.data;
-          await simpanMasterOffline('dataAwalGuru_' + appState.guru.idGuru, data);
-        }
+  let data;
+  if (navigator.onLine) {
+    try {
+      const res = await requestApi('getDataAwalGuru', { idGuru: appState.guru.idGuru }, 'GET');
+      if (res && res.sukses && res.data) {
+        data = res.data;
+        await simpanMasterOffline('dataAwalGuru_' + appState.guru.idGuru, data);
       } else {
-        data = await ambilMasterOffline('dataAwalGuru_' + appState.guru.idGuru);
+        console.warn('Respon backend tidak sukses:', res);
       }
-
-      if (!data) {
-        showToast('Data master guru tidak tersedia secara offline.', 'error');
-        return;
-      }
-
-      appState.mapelList = data.guru.mapel || [];
-      appState.kelasList = data.kelas || [];
-      appState.jpList = data.jp || [];
-      appState.tanggalDatabase = data.tanggal ? data.tanggal.database : new Date().toISOString().split('T')[0];
-
-      document.getElementById('selectionTanggal').textContent = data.tanggal ? data.tanggal.lengkap : '-';
-      document.getElementById('selectionSemester').textContent = data.aplikasi ? (data.aplikasi.semester + ' ' + data.aplikasi.tahunPelajaran) : '-';
-
-      isiDropdown('mapelSelect', appState.mapelList, 'idMapel', 'namaMapel', 'Pilih mata pelajaran');
-      isiDropdown('kelasSelect', appState.kelasList, 'idKelas', 'namaKelas', 'Pilih kelas');
-      isiDropdown('jpSelect', appState.jpList, 'jp', 'label', 'Pilih jam pelajaran');
+    } catch (e) {
+      console.warn('Gagal ambil data online, mencoba offline:', e);
     }
+  }
+
+  // Jika offline atau fetch gagal, ambil dari cache IndexedDB
+  if (!data) {
+    data = await ambilMasterOffline('dataAwalGuru_' + appState.guru.idGuru);
+  }
+
+  if (!data) {
+    showToast('Data master guru tidak tersedia secara offline.', 'error');
+    return;
+  }
+
+  appState.mapelList = (data.guru && data.guru.mapel) ? data.guru.mapel : [];
+  appState.kelasList = data.kelas || [];
+  appState.jpList = data.jp || [];
+  appState.tanggalDatabase = data.tanggal ? data.tanggal.database : new Date().toISOString().split('T')[0];
+
+  document.getElementById('selectionTanggal').textContent = data.tanggal ? data.tanggal.lengkap : '-';
+  document.getElementById('selectionSemester').textContent = data.aplikasi ? (data.aplikasi.semester + ' ' + data.aplikasi.tahunPelajaran) : '-';
+
+  isiDropdown('mapelSelect', appState.mapelList, 'idMapel', 'namaMapel', 'Pilih mata pelajaran');
+  isiDropdown('kelasSelect', appState.kelasList, 'idKelas', 'namaKelas', 'Pilih kelas');
+  isiDropdown('jpSelect', appState.jpList, 'jp', 'label', 'Pilih jam pelajaran');
+}
 
     function isiDropdown(elemId, list, valKey, textKey, defaultText) {
       const el = document.getElementById(elemId);
