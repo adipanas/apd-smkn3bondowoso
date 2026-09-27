@@ -1,0 +1,17 @@
+{
+  "name": "Absensi dan Penilaian Digital",
+  "short_name": "APD SMKN 3",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#075bc9",
+  "theme_color": "#075bc9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgu4CQYNMcMdpEL4zfQp6eyCtTH5NqpnmXr2JOOI6QPi8ktsfylvEpeBK7FOlYSMGBq6hnZy75XvATm2VRmrVcXR0C39joe_v_GrAaosLdsrE6k1E5FjHY0ky-OdpIt3MnGhyphenhyphenJmRB7JAabdZdIu-b-fFGB26BP6Us39vtkJGnW2rlzEjTk0e-jgfTVGuoUY/s512/49cc3a15-ea1a-4b69-98d7-02fa415fb250%20(1).png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
